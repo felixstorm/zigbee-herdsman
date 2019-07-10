@@ -743,7 +743,7 @@ ru.clause('attrVal', function () {
             }).tap(function () {
                 var tempArr = [];
                 this.vars.elmVals.forEach(function (elmVal) {
-                    if (elmVal.data) tempArr.push(elmVal.data);
+                    if (elmVal.data != null) tempArr.push(elmVal.data);
                 });
                 this.vars.elmVals = tempArr;
             });
