@@ -433,6 +433,9 @@ function getDataType(dataType) {
             newDataType = 'secKey';
             parsedBufLen += 16;
             break;
+        case 'array':
+            newDataType = 'array';
+            break;
     }
     return newDataType;
 }
@@ -519,6 +522,29 @@ function getDataTypeBuf (type, value) {
             string = value;
             strLen = string.length;
             dataBuf = dataBuf.uint16(strLen).string(value, 'ucs2');
+            break;
+        case 'buffer':
+            var array = Array.isArray(value.data) ? value.data : value,
+                buffer;
+            if (Array.isArray(array)) {
+                buffer = Buffer.from(array);
+            }
+            else {
+                if(typeof value !== 'string') {
+                    throw new Error('For ' + type + ' the value must be a hex string or the value itself or its property \'data\' must be a byte array.');
+                }
+                buffer = Buffer.from(value, 'hex');
+            }
+            dataBuf = dataBuf.uint8(buffer.length).buffer(buffer);
+            break;
+        case 'array':
+            if (!value.hasOwnProperty('elmType') || !Array.isArray(value.elmVals)) {
+                throw new Error('The value for ' + type + ' must have the properties \'elmType\' and \'elmVals\' and \'elmVals\' must be an array.');
+            }
+            dataBuf = dataBuf.uint8(value.elmType).uint16(value.elmVals.length);
+            value.elmVals.map(elmVal => {
+                dataBuf = dataBuf.buffer(getDataTypeBuf(getDataType(value.elmType), elmVal));
+            });
             break;
     }
     if (dataBuf instanceof Concentrate) {
