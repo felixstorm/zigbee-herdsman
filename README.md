@@ -6,16 +6,15 @@ The goal is to refactor zigbee-shepherd to improve maintainability.
 ### Todo
 - [x] Setup Typescript environment
 - [x] Refactor unpi
-- [ ] Refactor cc-znp
-- [ ] Remove areq
-- [ ] Remove dissolve-chunks
-- [ ] Refactor zcl-id
-- [ ] Refactor zcl-packet
+- [x] dissolve-chunks/concentrate -> types (+ refactor)
+- [x] cc-znp -> znp (+ refactor)
+- [x] Refactor zstack-constants
+- [x] zcl-id + zcl-packet -> zcl (+ refactor)
+- [ ] Cleanup zcl-packet (remove dissolve-chunks, concentrator depedency, deprecated/zcl-packet)
 - [ ] Refactor lib (original source of zigbee-shepherd)
-- [ ] Refactor zstack-constants
 - [ ] What to do with ziee (remove?)
 - [ ] What to do with zive (remove?)
-
+- [ ] What to do with areq (remove?)
 
 ### Start
 ```
@@ -35,10 +34,12 @@ SUM:                            66           1546            430          17231
 -------------------------------------------------------------------------------
 Language                     files          blank        comment           code
 -------------------------------------------------------------------------------
-JSON                            14              0              0           9546
-TypeScript                      53           1530            419           7588
+TypeScript                      75           1646            402          15677
+JSON                             2              0              0           1614
 YAML                             2              0              0             10
 -------------------------------------------------------------------------------
-SUM:                            69           1530            419          17144
+SUM:                            79           1646            402          17301
 -------------------------------------------------------------------------------
 ```
+
+(number is temporarily up because two ZCL parsers are present to test regression)

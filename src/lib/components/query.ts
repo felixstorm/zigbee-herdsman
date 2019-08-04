@@ -1,11 +1,11 @@
 /* jshint node: true */
 'use strict';
+import * as Zcl from '../../zcl';
+import * as Zsc from '../../zstack-constants';
 
 var Q = require('q'),
     _ = require('busyman'),
-    zclId = require('../../zcl-id'),
-    proving = require('proving'),
-    ZSC = require('../../zstack-constants');
+    proving = require('proving');
 
 var Endpoint  = require('../model/endpoint'),
     Coordpoint  = require('../model/coordpoint'),
@@ -87,8 +87,8 @@ query.endpoint = function (nwkAddr, epId, callback) {
             profId: rsp.profileid || 0,
             epId: rsp.endpoint,
             devId: rsp.deviceid || 0,
-            inClusterList: bufToArray(rsp.inclusterlist, 'uint16'),
-            outClusterList: bufToArray(rsp.outclusterlist, 'uint16')
+            inClusterList: rsp.inclusterlist,
+            outClusterList: rsp.outclusterlist,
         };
     }).nodeify(callback);
 };
@@ -126,7 +126,7 @@ query.deviceWithEndpoints = function (nwkAddr, ieeeAddr, callback) {
 
 query.setBindingEntry = function (bindMode, srcEp, cId, dstEpOrGrpId, callback) {
     var deferred = Q.defer(),
-        cIdItem = zclId.cluster(cId),
+        cIdItem = Zcl.getClusterLegacy(cId),
         bindParams,
         dstEp,
         grpId,
@@ -149,7 +149,7 @@ query.setBindingEntry = function (bindMode, srcEp, cId, dstEpOrGrpId, callback) 
         srcaddr: srcEp.getIeeeAddr(),
         srcendpoint: srcEp.getEpId(),
         clusterid: cIdItem.value,
-        dstaddrmode: dstEp ? ZSC.AF.addressMode.ADDR_64BIT : ZSC.AF.addressMode.ADDR_GROUP,
+        dstaddrmode: dstEp ? Zsc.COMMON.addressMode.ADDR_64BIT : Zsc.COMMON.addressMode.ADDR_GROUP,
         addr_short_long: dstEp ? dstEp.getIeeeAddr() : zutils.toLongAddrString(grpId),
         dstendpoint: dstEp ? dstEp.getEpId() : 0xFF
     };
@@ -177,7 +177,7 @@ query.setBindingEntry = function (bindMode, srcEp, cId, dstEpOrGrpId, callback) 
 /*** Protected Methods                                                                         ***/
 /*************************************************************************************************/
 query._network = function (param, callback) {
-    var prop = ZSC.SAPI.zbDeviceInfo[param];
+    var prop = Zsc.SAPI.zbDeviceInfo[param];
 
     return Q.fcall(function () {
         if (_.isNil(prop))
@@ -265,7 +265,7 @@ query._networkAll = function (callback) {
 };
 
 function devType(type) {
-    var DEVTYPE = ZSC.ZDO.deviceLogicalType;
+    var DEVTYPE = Zsc.ZDO.deviceLogicalType;
 
     switch (type) {
         case DEVTYPE.COORDINATOR:

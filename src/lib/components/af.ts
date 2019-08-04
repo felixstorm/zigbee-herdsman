@@ -1,14 +1,12 @@
-/* jshint node: true */
-'use strict';
+import * as Zsc from '../../zstack-constants';
+import * as Zcl from '../../zcl';
 
 var EventEmitter = require('events');
 
 var Q = require('q'),
     _ = require('busyman'),
-    Areq = require('../../areq'),
-    zclId = require('../../zcl-id'),
-    proving = require('proving'),
-    ZSC = require('../../zstack-constants');
+    Areq = require('../../deprecated/areq'),
+    proving = require('proving');
 
 var zcl = require('./zcl'),
     zutils = require('./zutils'),
@@ -42,7 +40,7 @@ af.send = function (srcEp, dstEp, cId, rawPayload, opt, callback) {
         throw new TypeError('srcEp should be an instance of Endpoint class.');
 
     if (_.isString(cId)) {
-        var cIdItem = zclId.cluster(cId);
+        var cIdItem = Zcl.getClusterLegacy(cId);
         if (_.isUndefined(cIdItem)) {
             deferred.reject(new Error('Invalid cluster id: ' + cId + '.'));
             return deferred.promise.nodeify(callback);
@@ -79,7 +77,7 @@ af.send = function (srcEp, dstEp, cId, rawPayload, opt, callback) {
 
     afParams = makeAfParams(senderEp, dstEp, cId, rawPayload, opt);
     afEventCnf = 'AF:dataConfirm:' + senderEp.getEpId() + ':' + afParams.transid;
-    apsAck = afParams.options & ZSC.AF.options.ACK_REQUEST;
+    apsAck = afParams.options & Zsc.AF.options.ACK_REQUEST;
 
     while (areq.isEventPending(afEventCnf)) {
         afParams.transid = controller.nextTransId();
@@ -131,13 +129,13 @@ af.sendExt = function (srcEp, addrMode, dstAddrOrGrpId, cId, rawPayload, opt, ca
 
     proving.number(addrMode, 'Af addrMode should be a number.');
 
-    if (addrMode === ZSC.AF.addressMode.ADDR_16BIT || addrMode === ZSC.AF.addressMode.ADDR_GROUP)
+    if (addrMode === Zsc.COMMON.addressMode.ADDR_16BIT || addrMode === Zsc.COMMON.addressMode.ADDR_GROUP)
         proving.number(dstAddrOrGrpId, 'Af dstAddrOrGrpId should be a number for network address or group id.');
-    else if (addrMode === ZSC.AF.addressMode.ADDR_64BIT)
+    else if (addrMode === Zsc.COMMON.addressMode.ADDR_64BIT)
         proving.string(dstAddrOrGrpId, 'Af dstAddrOrGrpId should be a string for long address.');
 
     if (_.isString(cId)) {
-        var cIdItem = zclId.cluster(cId);
+        var cIdItem = Zcl.getClusterLegacy(cId);
         if (_.isUndefined(cIdItem)) {
             deferred.reject(new Error('Invalid cluster id: ' + cId + '.'));
             return deferred.promise.nodeify(callback);
@@ -173,7 +171,7 @@ af.sendExt = function (srcEp, addrMode, dstAddrOrGrpId, cId, rawPayload, opt, ca
         return deferred.promise.nodeify(callback);
     }
 
-    if (addrMode === ZSC.AF.addressMode.ADDR_GROUP || addrMode === ZSC.AF.addressMode.ADDR_BROADCAST) {
+    if (addrMode === Zsc.COMMON.addressMode.ADDR_GROUP || addrMode === Zsc.COMMON.addressMode.ADDR_BROADCAST) {
         // no ack
         controller.request('AF', 'dataRequestExt', afParamsExt).then(function (rsp) {
             if (rsp.status !== 0 && rsp.status !== 'SUCCESS')   // unsuccessful
@@ -186,7 +184,7 @@ af.sendExt = function (srcEp, addrMode, dstAddrOrGrpId, cId, rawPayload, opt, ca
 
     } else {
         afEventCnf = 'AF:dataConfirm:' + senderEp.getEpId() + ':' + afParamsExt.transid;
-        apsAck = afParamsExt.options & ZSC.AF.options.ACK_REQUEST;
+        apsAck = afParamsExt.options & Zsc.AF.options.ACK_REQUEST;
 
         while (areq.isEventPending(afEventCnf)) {
             afParamsExt.transid = controller.nextTransId();
@@ -381,7 +379,7 @@ af.zclFunctional = function (srcEp, dstEp, cId, cmd, zclData, cfg, callback) {
 
     // af.send(srcEp, dstEp, cId, rawPayload, opt, callback)
     if (srcEp instanceof Group) {
-        af.sendExt(srcEp, ZSC.AF.addressMode.ADDR_GROUP, srcEp.groupID, cId, zclBuffer).fail(function (err) {
+        af.sendExt(srcEp, Zsc.COMMON.addressMode.ADDR_GROUP, srcEp.groupID, cId, zclBuffer).fail(function (err) {
             if (mandatoryEvent && areq.isEventPending(mandatoryEvent))
                 areq.reject(mandatoryEvent, err);
             else
@@ -436,7 +434,7 @@ af.zclClustersReq = function (dstEp, eventEmitter, callback) {    // callback(er
     var i = 0;
     // each request
     _.forEach(clusterList, function (cId) {
-        var cIdString = zclId.cluster(cId);
+        var cIdString = Zcl.getClusterLegacy(cId);
         cIdString = cIdString ? cIdString.key : cId;
 
         clusterAttrsReqs.push(function (clusters) {
@@ -525,7 +523,7 @@ af.zclClusterAttrsReq = function (dstEp, cId, callback) {
     }).then(function (attributes) {
         var attrs = {};
         _.forEach(attributes, function (rec) {  // { attrId, status, dataType, attrData }
-            var attrIdString = zclId.attr(cId, rec.attrId);
+            var attrIdString = Zcl.getAttributeLegacy(cId, rec.attrId);
 
             attrIdString = attrIdString ? attrIdString.key : rec.attrId;
 
@@ -696,6 +694,13 @@ function dispatchIncomingMsg(type, msg) {
             if (frameType === 0 && msg.zclMsg.cmdId === 'report' || msg.zclMsg.cmdId === 'readRsp') {
                 const type = msg.zclMsg.cmdId === 'report' ? 'ind:reported' : 'ind:readRsp';
                 af.controller._shepherd.emit(type, targetEp, msg.clusterid, msg.zclMsg.payload, msg);
+
+                // https://github.com/Koenkk/zigbee2mqtt/issues/1722
+                if (msg.zclMsg.cmdId === 'report' && msg.zclMsg.frameCntl.disDefaultRsp === 0) {
+                   const cmdId = Zcl.Foundation.report.ID;
+                   af.zclFoundation(targetEp, remoteEp, msg.clusterid, 'defaultRsp',
+                       {cmdId: cmdId, statusCode: 0}, {disDefaultRsp: 1, seqNum: msg.zclMsg.seqNum}, null);
+                }
             }
 
             const cmdIDs = [
@@ -735,7 +740,7 @@ function dispatchIncomingMsg(type, msg) {
     // further parse for ZCL packet from incomingMsg and incomingMsgExt
     if (zclHeader) {  // if (zclHeader && targetEp.isZclSupported()) {
         if (zclHeader.frameCntl.frameType === 0) {          // foundation
-            zcl.parse(msg.data, function (err, zclData) {
+            zcl.parse(msg.data, msg.clusterid, function (err, zclData) {
                 if (!err)
                     zclIncomingParsedMsgEmitter(msg, zclData);
             });
@@ -794,7 +799,7 @@ function makeAfParams(loEp, dstEp, cId, rawPayload, opt) {
     if (opt.hasOwnProperty('radius'))
         proving.number(opt.radius, 'opt.radius should be a number.');
 
-    var afOptions = ZSC.AF.options.ACK_REQUEST | ZSC.AF.options.DISCV_ROUTE,    // ACK_REQUEST (0x10), DISCV_ROUTE (0x20)
+    var afOptions = Zsc.AF.options.ACK_REQUEST | Zsc.AF.options.DISCV_ROUTE,    // ACK_REQUEST (0x10), DISCV_ROUTE (0x20)
         afParams = {
             dstaddr: dstEp.getNwkAddr(),
             destendpoint: dstEp.getEpId(),
@@ -802,7 +807,7 @@ function makeAfParams(loEp, dstEp, cId, rawPayload, opt) {
             clusterid: cId,
             transid: af.controller ? af.controller.nextTransId() : null,
             options: opt.hasOwnProperty('options') ? opt.options : afOptions,
-            radius: opt.hasOwnProperty('radius') ? opt.radius : ZSC.AF_DEFAULT_RADIUS,
+            radius: opt.hasOwnProperty('radius') ? opt.radius : Zsc.AF.DEFAULT_RADIUS,
             len: rawPayload.length,
             data: rawPayload
         };
@@ -823,7 +828,7 @@ function makeAfParamsExt(loEp, addrMode, dstAddrOrGrpId, cId, rawPayload, opt) {
     if (opt.hasOwnProperty('radius'))
         proving.number(opt.radius, 'opt.radius should be a number.');
 
-    var afOptions = ZSC.AF.options.DISCV_ROUTE,
+    var afOptions = Zsc.AF.options.DISCV_ROUTE,
         afParamsExt = {
             dstaddrmode: addrMode,
             dstaddr: zutils.toLongAddrString(dstAddrOrGrpId),
@@ -833,23 +838,23 @@ function makeAfParamsExt(loEp, addrMode, dstAddrOrGrpId, cId, rawPayload, opt) {
             clusterid: cId,
             transid: af.controller ? af.controller.nextTransId() : null,
             options: opt.hasOwnProperty('options') ? opt.options : afOptions,
-            radius: opt.hasOwnProperty('radius') ? opt.radius : ZSC.AF_DEFAULT_RADIUS,
+            radius: opt.hasOwnProperty('radius') ? opt.radius : Zsc.AF.DEFAULT_RADIUS,
             len: rawPayload.length,
             data: rawPayload
         };
 
     switch (addrMode) {
-        case ZSC.AF.addressMode.ADDR_NOT_PRESENT:
+        case Zsc.COMMON.addressMode.ADDR_NOT_PRESENT:
             break;
-        case ZSC.AF.addressMode.ADDR_GROUP:
+        case Zsc.COMMON.addressMode.ADDR_GROUP:
             afParamsExt.destendpoint = 0xFF;
             break;
-        case ZSC.AF.addressMode.ADDR_16BIT:
-        case ZSC.AF.addressMode.ADDR_64BIT:
+        case Zsc.COMMON.addressMode.ADDR_16BIT:
+        case Zsc.COMMON.addressMode.ADDR_64BIT:
             afParamsExt.destendpoint = opt.hasOwnProperty('dstEpId') ? opt.dstEpId : 0xFF;
-            afParamsExt.options = opt.hasOwnProperty('options') ? opt.options : afOptions | ZSC.AF.options.ACK_REQUEST;
+            afParamsExt.options = opt.hasOwnProperty('options') ? opt.options : afOptions | Zsc.AF.options.ACK_REQUEST;
             break;
-        case ZSC.AF.addressMode.ADDR_BROADCAST:
+        case Zsc.COMMON.addressMode.ADDR_BROADCAST:
             afParamsExt.destendpoint = 0xFF;
             afParamsExt.dstaddr = zutils.toLongAddrString(0xFFFF);
             break;

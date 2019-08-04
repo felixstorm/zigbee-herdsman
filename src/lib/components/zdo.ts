@@ -1,10 +1,11 @@
-/* jshint node: true */
-'use strict';
+import {Znp} from '../../znp';
+import {Subsystem} from '../../unpi/constants';
+
+import * as Zsc from '../../zstack-constants';
 
 var Q = require('q'),
-    Areq = require('../../areq'),
-    znp = require('../../cc-znp'),
-    ZSC = require('../../zstack-constants');
+    Areq = require('../../deprecated/areq'),
+    znp = Znp;
 
 var zdoHelper = require('./zdo_helper');
 
@@ -34,18 +35,20 @@ Zdo.prototype.request = function (apiName, valObj, callback) {
 /*** Protected Methods                                                                         ***/
 /*************************************************************************************************/
 Zdo.prototype._sendZdoRequestViaZnp = function (apiName, valObj, callback) {
-    var zdoRequest = znp.zdoRequest.bind(znp); // bind zdo._sendZdoRequestViaZnp() to znp.zdoRequest()
+    return znp.getInstance().request(Subsystem.ZDO, apiName, valObj)
+        .then((obj) => {
+            let error = null;
+            if (apiName !== 'startupFromApp' && obj.payload.status !== 0) {
+                error = new Error('request unsuccess: ' + obj.payload.status);
+            }
 
-    return zdoRequest(apiName, valObj, function (err, rsp) {
-        var error = null;
-
-        if (err)
-            error = err;
-        else if (apiName !== 'startupFromApp' && rsp.status !== 0)
-            error = new Error('request unsuccess: ' + rsp.status);
-
-        callback(error, rsp);
-    });
+            if (error) {
+                callback(error, obj.payload)
+            } else {
+                callback(null, obj.payload)
+            }
+        })
+        .catch((error) => callback(error, null))
 };
 
 Zdo.prototype._rsplessRequest = function (apiName, valObj, callback) {
@@ -76,7 +79,7 @@ Zdo.prototype._specialRequest = function (apiName, valObj, callback) {
         // listener at controller.on('ZDO:serverDiscRsp')
         return this._rsplessRequest('serverDiscReq', valObj, callback);
     } else if (apiName === 'bindReq') {
-        if (valObj.dstaddrmode === ZSC.AF.addressMode.ADDR_16BIT)
+        if (valObj.dstaddrmode === Zsc.COMMON.addressMode.ADDR_16BIT)
             callback(new Error('TI not support address 16bit mode.'));
         else
             return this._genericRequest('bindReq', valObj, callback);

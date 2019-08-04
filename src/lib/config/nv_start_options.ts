@@ -1,9 +1,6 @@
-/* jshint node: true */
-'use strict';
-
-var ZSC = require('../../zstack-constants'),
-    NVID8 = ZSC.SAPI.nvItemIdsUint8,
-    NVID16 = ZSC.SYS.nvItemIds;
+import * as Zsc from '../../zstack-constants';
+var NVID8 = Zsc.SAPI.nvItemIdsUint8;
+var NVID16 = Zsc.COMMON.nvItemIds;
 
 var nvParams = {
     startupOption: {

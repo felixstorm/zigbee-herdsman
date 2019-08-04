@@ -17,17 +17,20 @@ enum Subsystem {
     DEBUG = 8,
     APP = 9,
     APP_CNF = 15,
+    GREENPOWER = 21,
 }
 
 const DataStart = 4;
 const SOF = 0xFE;
 
-const PositionLength = 1;
+const PositionDataLength = 1;
 const PositionCmd0 = 2;
 const PositionCmd1 = 3;
 
-const MinimalMessageLength = 5;
+const MinMessageLength = 5;
+const MaxDataSize = 250;
 
 export {
-    Type, Subsystem, DataStart, SOF, PositionLength, MinimalMessageLength, PositionCmd0, PositionCmd1,
+    Type, Subsystem, DataStart, SOF, PositionDataLength, MinMessageLength, PositionCmd0, PositionCmd1,
+    MaxDataSize,
 };
