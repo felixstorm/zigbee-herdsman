@@ -148,10 +148,18 @@ const Foundation: {
             {name: 'dataType', type: DataType.uint8},
         ],
     },
+    readStruct: {
+        ID: 14,
+        parseStrategy: 'repetitive',
+        parameters: [
+            {name: 'attrId', type: DataType.uint16},
+            {name: 'selectors', type: DataType.array},
+        ],
+        response: 1, // readRsp
+    },
 
     /**
      * TODO: not all commands are supported yet, missing:
-     * - 14: readStruct
      * - 15: writeStruct
      * - 16: writeStructRsp
      * - 17: discoverCommandsReceived

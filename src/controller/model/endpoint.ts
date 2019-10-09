@@ -208,6 +208,26 @@ class Endpoint extends Entity {
         return ZclFrameConverter.attributeList(result.frame);
     }
 
+    public async readStructured(
+        clusterKey: number | string, attributes: {[s: string]: number[]}, options?: Options
+    ): Promise<KeyValue> {
+        const {manufacturerCode, disableDefaultResponse} = this.getOptionsWithDefaults(options, true);
+        const cluster = Zcl.Utils.getCluster(clusterKey);
+        const payload: {attrId: number; selectors: number[]}[] = [];
+        for (const [nameOrID, selectors] of Object.entries(attributes)) {
+            payload.push({attrId: cluster.getAttribute(nameOrID).ID, selectors});
+        }
+
+        const frame = Zcl.ZclFrame.create(
+            Zcl.FrameType.GLOBAL, Zcl.Direction.CLIENT_TO_SERVER, disableDefaultResponse,
+            manufacturerCode, ZclTransactionSequenceNumber.next(), 'readStruct', cluster.ID, payload
+        );
+        const result = await Entity.adapter.sendZclFrameNetworkAddressWithResponse(
+            this.deviceNetworkAddress, this.ID, frame
+        );
+        return ZclFrameConverter.attributeList(result.frame);
+    }
+
     public async readResponse(
         clusterKey: number | string, transactionSequenceNumber: number, attributes: KeyValue, options?: Options
     ): Promise<void> {
